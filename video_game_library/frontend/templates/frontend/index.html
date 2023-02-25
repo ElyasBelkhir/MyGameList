@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Game Library</title>
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+
+	<link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+
+	<style type="text/css">
+		body{
+            background-image: linear-gradient(to right, #434343 0%, black 100%);
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            color:aliceblue;
+		}
+
+		h1, h2, h3, h4, h5, p, span, strike{
+		  font-family: 'Roboto', sans-serif;
+          text-align: center;
+		}
+
+		#task-container{
+		  max-width:600px;
+		  margin:0 auto;
+		  box-shadow: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
+		  background-color: #fff;
+		  
+		  margin-top:100px;
+		  margin-bottom:100px;
+
+		  justify-content: space-around;
+		  align-items: flex-start;
+
+		}
+
+		#form-wrapper{
+		  position: -webkit-sticky;
+		  position: sticky;
+		  top: 0rem;
+		  border-bottom: 1px solid  #e9e9e9;
+		  background-color: #fff;
+		  box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+ 		  padding:40px;
+		}
+
+		#submit{
+		  background-color: #36d9b6;
+		  border-radius: 0;
+		  border:0;
+		  color: #fff;
+		}
+
+		.flex-wrapper{
+			display: flex;
+		}
+
+		.task-wrapper{
+		  	margin:5px;
+		  	padding: 5px;
+		  	padding:20px;
+		  	cursor: pointer;
+		  	border-bottom: 1px solid  #e9e9e9;
+		  	color: aliceblue;
+			}
+
+	</style>
+
+</head>
+<body>
+    <h1>Video Game Library</h1>
+
+
+        <div class="container">
+            <div id="form-wrapper">
+                <form id="form">
+                    <div class="flex-wrapper">
+                        <div style="flex: 6">
+                            <input id="title" type="text" name="gameTitle" placeholder="Game Name">
+                        </div>
+                        <div style="flex: 6">
+                            <input id="date" type="date" name="gameDate" placeholder="Game Date">
+                        </div>
+                        <div style="flex: 6">
+                            <input id="rating" type="number" name="gameRating" placeholder="Score">
+                        </div>
+                        <div style="flex: 1">
+                            <input id = "submit" class="btn" type="submit">
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div id="list-wrapper">
+            
+            </div>
+            </div>
+        </div>
+
+    <script>
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    // Does this cookie string begin with the name we want?
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
+        var activeItem = null;
+
+        buildList();
+        function buildList() {
+            const wrapper = document.getElementById('list-wrapper')
+            wrapper.innerHTML = ''
+            const url = 'http://127.0.0.1:8000/api/game-list'
+            fetch(url)
+            .then((resp) => resp.json())
+            .then(function(data) {
+                console.log('Data:', data)
+
+                var list = data
+                for (var i in list) {
+                    var item = `
+                        <div id="data-row-${i}" class="task-wrapper flex-wrapper">
+                            <div style="flex:7">
+                                <span class="title">${list[i].gameTitle}</span>
+                                <span class="title">${list[i].gameDate}</span>
+                                <span class="title">${list[i].gameRating}</span>
+                            </div>
+                            <div style="flex:1">
+                                <button class="btn btn-sm btn-outline-info edit">Edit </button>
+                            </div>
+                            <div style="flex:1">
+                                <button class="btn btn-sm btn-outline-dark delete">Delete </button>
+                            </div>
+
+                        </div>
+
+                    `
+                    wrapper.innerHTML += item
+                }
+
+                for (const i in list){
+                    const editBtn = document.getElementsByClassName('edit')[i]
+                    editBtn.addEventListener('click', (function(item){
+                        return function() {
+                            editItem(item)
+                        }
+                    })(list[i]))
+                }
+
+                for (const i in list){
+                    const deleteBtn = document.getElementsByClassName('delete')[i]
+                    deleteBtn.addEventListener('click', (function(item){
+                        return function() {
+                            deleteItem(item)
+                        }
+                    })(list[i]))
+                }
+            })
+        } 
+        const form = document.getElementById('form-wrapper')
+        form.addEventListener('submit', function(e) {
+            e.preventDefault()
+            console.log('Form Submitted')
+            
+            var url = 'http://127.0.0.1:8000/api/game-create'
+            if (activeItem != null) {
+                var url = `http://127.0.0.1:8000/api/game-create/${activeItem.id}`
+                activeItem = null
+            }
+
+            const formData = new FormData(e.target)
+            
+            const payload = {
+                'gameTitle': formData.get('gameTitle'),
+                'gameDate': formData.get('gameDate'),
+                'gameRating': formData.get('gameRating')
+            }
+            
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-type': 'application/json',
+                    'X-CSRFToken':csrftoken,
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(function(response) {
+                buildList()
+                document.getElementById('form').reset()
+            })
+        })
+
+        function editItem(item) {
+            console.log('Item clicked', item)
+            activeItem = item
+            document.getElementById('title').value = activeItem.gameTitle
+            document.getElementById('date').value = activeItem.gameDate
+            document.getElementById('rating').value = activeItem.gameRating
+
+        }
+
+        function deleteItem(item) {
+            console.log('Item deleted', item)
+            activeItem = item
+            var url = `http://127.0.0.1:8000/api/game-delete/${item.id}`
+
+            fetch(url, {
+                method:'DELETE',
+                headers: {
+                    'Content-type': 'application/json',
+                    'X-CSRFToken':csrftoken,
+                }
+
+            }).then((response) => {
+                buildList()
+            })
+            
+        }
+    </script>
+</body>
+</html>
+
+    
